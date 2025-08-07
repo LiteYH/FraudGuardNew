@@ -88,7 +88,10 @@ export function PasswordManager({ className }: PasswordManagerProps) {
           setPasswords(parsedPasswords);
         } catch (error) {
           console.error('Failed to parse stored passwords:', error);
+          setPasswords([]);
         }
+      } else {
+        setPasswords([]);
       }
     }
   }, [isUnlocked]);
@@ -104,54 +107,57 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   useEffect(() => {
     if (account && isAuthenticated) {
       walrusSealManager.setWalletAddress(account.address);
-      
-      if (isUnlocked && passwords.length === 0) {
-        // Load sample data for demo only if no stored passwords
-        const storedPasswords = localStorage.getItem('fraudguard-passwords');
-        if (!storedPasswords) {
-          const samplePasswords: PasswordEntry[] = [
-            {
-              id: "1",
-              title: "Gmail Account",
-              username: "user@gmail.com",
-              password: "securePassword123!",
-              url: "https://gmail.com",
-              notes: "Main email account",
-              category: "Personal",
-              createdAt: new Date("2024-01-01"),
-              updatedAt: new Date("2024-01-01"),
-              zkVerified: true
-            },
-            {
-              id: "2",
-              title: "GitHub",
-              username: "developer",
-              password: "githubSecure456!",
-              url: "https://github.com",
-              notes: "Code repository access",
-              category: "Work",
-              createdAt: new Date("2024-01-02"),
-              updatedAt: new Date("2024-01-02"),
-              zkVerified: true
-            },
-            {
-              id: "3",
-              title: "Bank of America",
-              username: "user123",
-              password: "bankSecure789!",
-              url: "https://bankofamerica.com",
-              notes: "Primary bank account",
-              category: "Banking",
-              createdAt: new Date("2024-01-03"),
-              updatedAt: new Date("2024-01-03"),
-              zkVerified: true
-            }
-          ];
-          setPasswords(samplePasswords);
-        }
+    }
+  }, [account, isAuthenticated]);
+
+  // Load sample data only once when vault is first unlocked
+  useEffect(() => {
+    if (isUnlocked && passwords.length === 0) {
+      const storedPasswords = localStorage.getItem('fraudguard-passwords');
+      if (!storedPasswords) {
+        console.log('Loading sample passwords for new user');
+        const samplePasswords: PasswordEntry[] = [
+          {
+            id: "sample-1",
+            title: "Gmail Account",
+            username: "user@gmail.com",
+            password: "securePassword123!",
+            url: "https://gmail.com",
+            notes: "Main email account",
+            category: "Personal",
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-01"),
+            zkVerified: true
+          },
+          {
+            id: "sample-2",
+            title: "GitHub",
+            username: "developer",
+            password: "githubSecure456!",
+            url: "https://github.com",
+            notes: "Code repository access",
+            category: "Work",
+            createdAt: new Date("2024-01-02"),
+            updatedAt: new Date("2024-01-02"),
+            zkVerified: true
+          },
+          {
+            id: "sample-3",
+            title: "Bank of America",
+            username: "user123",
+            password: "bankSecure789!",
+            url: "https://bankofamerica.com",
+            notes: "Primary bank account",
+            category: "Banking",
+            createdAt: new Date("2024-01-03"),
+            updatedAt: new Date("2024-01-03"),
+            zkVerified: true
+          }
+        ];
+        setPasswords(samplePasswords);
       }
     }
-  }, [account, isAuthenticated, isUnlocked, passwords.length]);
+  }, [isUnlocked, passwords.length]);
 
   // Check password strength when password changes
   useEffect(() => {
@@ -162,10 +168,11 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   }, [newPassword.password]);
 
   const handleUnlock = async () => {
-    if (masterPassword.length < 8) {
+    console.log('🔓 UNLOCK ATTEMPT - Password length:', masterPassword.length);
+    if (masterPassword.length < 3) {
       toast({
         title: "⚠️ Weak Password",
-        description: "Master password must be at least 8 characters",
+        description: "Master password must be at least 3 characters",
         variant: "destructive"
       });
       return;
@@ -174,6 +181,11 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     setIsInitializing(true);
     
     try {
+      // Set wallet address for walrus-seal manager
+      if (account?.address) {
+        walrusSealManager.setWalletAddress(account.address);
+      }
+      
       // Simulate vault creation/loading with Walrus & Seal
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -186,6 +198,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
         description: "Your password vault is now accessible with zkLogin security",
       });
     } catch (error) {
+      console.error('Unlock error:', error);
       toast({
         title: "❌ Unlock Failed",
         description: "Failed to unlock vault. Please check your credentials.",
@@ -226,6 +239,8 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     setNewPassword(prev => ({ ...prev, password }));
   };
 
+
+
   const addPassword = () => {
     if (!newPassword.title || !newPassword.username || !newPassword.password) {
       toast({
@@ -241,7 +256,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       ...newPassword,
       createdAt: new Date(),
       updatedAt: new Date(),
-      zkVerified: true // Mark as verified by zkLogin
+      zkVerified: true
     };
 
     setPasswords(prev => [...prev, passwordEntry]);
@@ -276,7 +291,13 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       updatedAt: new Date()
     };
 
-    setPasswords(prev => prev.map(p => p.id === editingPassword.id ? updatedPassword : p));
+    console.log('Updating password:', updatedPassword);
+    setPasswords(prev => {
+      const newPasswords = prev.map(p => p.id === editingPassword.id ? updatedPassword : p);
+      console.log('Passwords after update:', newPasswords);
+      return newPasswords;
+    });
+    
     setEditingPassword(null);
     setShowEditDialog(false);
     
@@ -284,6 +305,11 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       title: "✅ Password Updated",
       description: "Password has been successfully updated",
     });
+  };
+
+  const startEditPassword = (password: PasswordEntry) => {
+    setEditingPassword({ ...password });
+    setShowEditDialog(true);
   };
 
   const deletePassword = (id: string) => {
@@ -295,6 +321,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   };
 
   const exportVault = () => {
+    console.log('🔄 NEW EXPORT FUNCTION RUNNING!');
     try {
       const vaultData = {
         version: "1.0.0",
@@ -341,23 +368,41 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       try {
         const vaultData = JSON.parse(e.target?.result as string);
         if (vaultData.passwords && Array.isArray(vaultData.passwords)) {
-          setPasswords(vaultData.passwords);
+          // Ensure all passwords have required fields
+          const validatedPasswords = vaultData.passwords.map((pwd: any) => ({
+            id: pwd.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            title: pwd.title || "Imported Password",
+            username: pwd.username || "",
+            password: pwd.password || "",
+            url: pwd.url || "",
+            notes: pwd.notes || "",
+            category: pwd.category || "General",
+            createdAt: pwd.createdAt ? new Date(pwd.createdAt) : new Date(),
+            updatedAt: pwd.updatedAt ? new Date(pwd.updatedAt) : new Date(),
+            zkVerified: pwd.zkVerified || false
+          }));
+          
+          setPasswords(validatedPasswords);
           toast({
             title: "📤 Vault Imported",
-            description: `Successfully imported ${vaultData.passwords.length} passwords`,
+            description: `Successfully imported ${validatedPasswords.length} passwords`,
           });
         } else {
           throw new Error("Invalid vault format");
         }
       } catch (error) {
+        console.error('Import error:', error);
         toast({
           title: "❌ Import Failed",
-          description: "Failed to import vault. Invalid file format.",
+          description: "Invalid vault file format. Please check the file and try again.",
           variant: "destructive"
         });
       }
     };
     reader.readAsText(file);
+    
+    // Reset the input
+    event.target.value = '';
   };
 
   const filteredPasswords = passwords.filter(password => {
@@ -734,10 +779,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              setEditingPassword(password);
-                              setShowEditDialog(true);
-                            }}
+                            onClick={() => startEditPassword(password)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

@@ -9,7 +9,6 @@ import { LoginInterface } from './LoginInterface';
 
 export function WalletConnection() {
   const account = useCurrentAccount();
-  const wallets = useWallets();
   const { mutate: connect } = useConnectWallet();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,15 +32,19 @@ export function WalletConnection() {
     setShowSlushAuth(true);
   };
 
-  // Handle authentication and redirects
+  // Handle authentication and redirection
   useEffect(() => {
     console.log('WalletConnection Debug:', { account: !!account, isAuthenticated, isRedirecting, pathname: location.pathname });
     
-    // If authenticated and on home page, redirect to dashboard
+    // If user successfully connects wallet and is authenticated, redirect to dashboard
     if (account && isAuthenticated && location.pathname === '/') {
-      console.log('User authenticated, redirecting to dashboard...');
-      navigate('/dashboard');
-      return;
+      console.log('User authenticated successfully, redirecting to dashboard...');
+      setIsRedirecting(true);
+      
+      // Add a small delay to show the success state
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500); // 1.5 second delay to show success message
     }
     
     // If already authenticated, show Slush auth after a short delay
@@ -53,19 +56,26 @@ export function WalletConnection() {
     }
   }, [account, isAuthenticated, showSlushAuth, location.pathname, navigate]);
 
-  // Handle successful authentication redirect
-  useEffect(() => {
-    if (account && isAuthenticated && showSlushAuth) {
-      console.log('Authentication successful, redirecting to dashboard...');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000); // Small delay to show success state
-    }
-  }, [account, isAuthenticated, showSlushAuth, navigate]);
-
   // If already authenticated and not on home page, don't render anything
   if (account && isAuthenticated && location.pathname !== '/') {
     return null;
+  }
+
+  // If user is authenticated and on home page, redirect to dashboard
+  if (account && isAuthenticated && location.pathname === '/') {
+    // The useEffect will handle the redirect, but we can show a loading state
+    return (
+      <div className="fixed inset-0 w-full h-screen overflow-hidden z-50">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 text-green-400 mb-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
+              <span className="text-lg">Authentication successful! Redirecting to dashboard...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (showSlushAuth) {
@@ -94,36 +104,36 @@ export function WalletConnection() {
             </div>
 
             <div className="flex justify-center mb-6">
-              <ConnectButton 
-                connectText={
-                  <div className="flex items-center gap-2 px-6 py-3">
-                    <span className="text-lg">🔐 Authenticate with Slush</span>
-                  </div>
-                }
-              />
+              {account && isAuthenticated ? (
+                <div className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg">
+                  <span className="text-lg">✅ Connected Successfully</span>
+                </div>
+              ) : (
+                <ConnectButton 
+                  connectText={
+                    <div className="flex items-center gap-2 px-6 py-3">
+                      <span className="text-lg">🔐 Authenticate with Slush</span>
+                    </div>
+                  }
+                />
+              )}
             </div>
             
             {isRedirecting && (
               <div className="text-center mb-4">
                 <div className="inline-flex items-center gap-2 text-green-400">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
-                  <span>Connecting to marketplace...</span>
+                  <span>Authentication successful! Redirecting to dashboard...</span>
                 </div>
               </div>
             )}
 
-            <div className="text-center space-y-2">
+            <div className="text-center">
               <button
                 onClick={() => setShowSlushAuth(false)}
-                className="text-gray-400 hover:text-white text-sm block"
+                className="text-gray-400 hover:text-white text-sm"
               >
                 ← Back to login options
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="text-blue-400 hover:text-blue-300 text-sm block"
-              >
-                Skip to Dashboard (Demo)
               </button>
             </div>
 

@@ -10,7 +10,7 @@ const PasswordManagerPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">
-              🔐 Password Manager
+               Password Manager
             </h1>
             <p className="text-gray-400">
               Secure, privacy-preserving password storage powered by Walrus & Seal with zkLogin
@@ -24,4 +24,4 @@ const PasswordManagerPage = () => {
   );
 };
 
-export default PasswordManagerPage; 
+export default PasswordManagerPage;

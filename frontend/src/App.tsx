@@ -22,9 +22,18 @@ const queryClient = new QueryClient();
 
 // Configure Sui networks
 const { networkConfig } = createNetworkConfig({
-  testnet: { url: getFullnodeUrl('testnet') },
-  devnet: { url: getFullnodeUrl('devnet') },
-  localnet: { url: getFullnodeUrl('localnet') },
+  testnet: { 
+    url: getFullnodeUrl('testnet'),
+    appName: 'FraudGuard'
+  },
+  devnet: { 
+    url: getFullnodeUrl('devnet'),
+    appName: 'FraudGuard'
+  },
+  localnet: { 
+    url: getFullnodeUrl('localnet'),
+    appName: 'FraudGuard'
+  },
 });
 
 const App = () => (
