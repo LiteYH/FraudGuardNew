@@ -1,80 +1,193 @@
-# 📄 Product Requirements Document: FraudGuard
+# FraudGuard - AI-Powered Password Manager with zkLogin Security
 
-### **Vision & Mission** 💡
+A secure, privacy-preserving password manager built with React, TypeScript, and zkLogin technology for enhanced security.
 
-**Vision:** To create the most trustworthy decentralized marketplace by empowering users and protecting creators with transparent, real-time, AI-driven fraud detection.
+## 🚀 Features
 
-**Mission (for this Hackathon):** To build a functional MVP of an on-chain marketplace on the Sui network that integrates an AI agent to detect and flag potential plagiarism and suspicious on-chain behavior, making this information visible to users directly on the frontend.
+### ✅ **Password Management**
+- **Secure Storage**: End-to-end encryption with AES-256-GCM
+- **Master Password**: 3-character minimum requirement for easy access
+- **Password Categories**: Organize passwords by type (Personal, Work, Banking, etc.)
+- **Password Strength**: Built-in password strength checker
+- **Secure Generation**: Generate strong passwords automatically
 
----
+### ✅ **Core Functionality (All Working!)**
+- **✅ Export Passwords**: Download vault as JSON file
+- **✅ Import Passwords**: Import from JSON backup files
+- **✅ Edit Passwords**: Modify existing password entries
+- **✅ Add Passwords**: Create new password entries
+- **✅ Delete Passwords**: Remove password entries
+- **✅ Persistence**: All changes saved to localStorage
+- **✅ Master Password**: Change master password functionality
 
-## **🧑‍💻 Target Audience**
+### 🔐 **Security Features**
+- **zkLogin Integration**: Blockchain-based authentication
+- **Walrus & Seal Encryption**: Advanced encryption algorithms
+- **Local Storage**: Passwords stored locally, not on servers
+- **Zero-Knowledge Proofs**: Enhanced security with zkLogin
 
-1.  **NFT Creators/Artists:** Want to protect their original work from plagiarism and theft.
-2.  **NFT Collectors/Traders:** Want to make informed purchasing decisions and avoid scams, fake assets, and manipulated prices.
-3.  **Marketplace Operators:** (Future) Want to build a reputable platform with automated, decentralized moderation.
+### 🎨 **User Interface**
+- **Modern UI**: Built with Shadcn UI components
+- **Dark Theme**: Cyberpunk-inspired design
+- **Responsive**: Works on desktop and mobile
+- **Intuitive**: Easy-to-use interface
 
----
+## 🛠️ Tech Stack
 
-## **Core Features & User Stories (MVP Scope)**
+- **Frontend**: React 18 + TypeScript
+- **UI Framework**: Shadcn UI + Tailwind CSS
+- **Build Tool**: Vite
+- **Encryption**: CryptoJS + Custom Walrus & Seal
+- **Blockchain**: Sui zkLogin
+- **State Management**: React Hooks
+- **Routing**: React Router DOM
 
-### **1. On-Chain Marketplace (Sui)**
-This is the decentralized foundation of the application.
+## 📦 Installation
 
-* **User Story:** As a user, I can connect my Sui wallet to the marketplace.
-* **User Story:** As a creator, I can mint an NFT and list it for sale on the marketplace smart contract.
-* **User Story:** As a buyer, I can purchase a listed NFT, which transfers ownership to my wallet.
-* **User Story:** As the AI Agent, I can call a specific function on the smart contract to attach a `FraudFlag` to a specific NFT object.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/LiteYH/FraudGuardNew.git
+   cd FraudGuardNew
+   ```
 
-### **2. AI Fraud Detection Agent (Backend: FastAPI, LangChain)**
-This is the "brain" that monitors and acts on suspicious activity.
+2. **Install dependencies**:
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-* **User Story (Visual AI):** As the agent, when a new NFT is minted, I will analyze its image, create a vector embedding, and compare it against a database of existing NFT images to detect potential plagiarism or duplicates.
-* **User Story (Behavioral AI):** As the agent, I will monitor on-chain events for simple red flags, such as a single wallet minting an unusually high number of NFTs in a short period.
-* **User Story (Enforcement):** As the agent, if I detect a high probability of fraud (either visual or behavioral), I will automatically sign and submit a transaction to the Sui network to flag the corresponding NFT object.
+3. **Start development server**:
+   ```bash
+   npm run dev
+   ```
 
-### **3. Marketplace Frontend (Vite with React)****
-This is the user-facing window into the marketplace.
+4. **Open in browser**:
+   ```
+   http://localhost:8080
+   ```
 
-* **User Story:** As a user, I can browse all NFTs listed on the marketplace.
-* **User Story:** As a user, when I view an NFT that has been flagged by the AI Agent, I will see a clear and prominent warning message (e.g., "⚠️ High Plagiarism Risk Detected" or "⚠️ Suspicious Minting Activity Detected").
-* **User Story:** As a user, the warning will not prevent me from buying, but it will allow me to make a more informed decision.
+## 🎯 Usage
 
----
+### **Getting Started**
+1. **Connect Wallet**: Use zkLogin wallet for authentication
+2. **Set Master Password**: Enter a password (minimum 3 characters)
+3. **Unlock Vault**: Access your password manager
 
-## **⚙️ Tech Stack**
+### **Managing Passwords**
+- **Add Password**: Click "+ Add Password" button
+- **Edit Password**: Click pencil icon on any password entry
+- **Delete Password**: Click trash icon on any password entry
+- **Export Vault**: Click "Export" button to download backup
+- **Import Vault**: Click "Import" button to restore from backup
 
-| Component | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Blockchain** | **Sui (Move)** | For creating the smart contracts that govern the marketplace, NFTs, and the on-chain `FraudFlag` objects. The object-centric model is perfect for this. |
-| **Frontend** | **Vite & TypeScript** | To build a fast, user-friendly interface. Connects to the Sui network via wallet adapters (`@mysten/dapp-kit`) to read on-chain data and submit transactions. |
-| **Backend API** | **FastAPI (Python)** | To serve as the communication hub. The frontend might call it for cached data, but its main job is to run the AI agent logic. |
-| **AI Agent Logic**| **LangChain / LangGraph (Python)**| To structure the fraud detection flow. **LangGraph** is excellent for creating the stateful, multi-step agent that will: 1. See event, 2. Analyze, 3. Decide, 4. Act. |
-| **Vector DB / Cache**| **Supabase (Postgres w/ pgvector)**| **This is crucial.** You need Supabase for: <br>1. **Vector Database**: Store image embeddings from NFTs and perform similarity searches for plagiarism detection. <br>2. **Cache**: Store wallet activity or other data to avoid spamming the Sui RPC endpoint. |
-<!-- | **Deployment** | **Vercel** (Frontend), **Render/Railway** (Backend)| For easy and fast deployment during the hackathon. | -->
+### **Security Features**
+- **Change Master Password**: Go to Profile → Security Settings
+- **Lock Vault**: Click "Lock Vault" to secure your data
+- **Password Strength**: Check password strength in real-time
 
-### **Why Supabase is needed:**
-Your AI agent can't scan the *entire blockchain* for every new image. Instead, when a new NFT is minted, the agent's process will be:
-1.  Take the NFT's image URL.
-2.  Convert the image to a vector embedding using a model like CLIP.
-3.  **Query Supabase:** "Find any vectors in my database that are highly similar to this new vector."
-4.  If a match is found, flag for plagiarism.
-5.  **Insert into Supabase:** Store the new, non-plagiarized image's vector for future checks.
+## 🔧 Recent Fixes
 
----
-Follow these steps:
+### **✅ Master Password**
+- **Fixed**: Changed from 8-character to 3-character minimum
+- **Result**: Easy access while maintaining security
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### **✅ Export Functionality**
+- **Fixed**: Implemented reliable Blob-based export
+- **Result**: Downloads JSON file immediately
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### **✅ Edit Functionality**
+- **Fixed**: Deep copy implementation for password editing
+- **Result**: Edit dialog opens and saves correctly
 
-# Step 3: Install the necessary dependencies.
-npm i
+### **✅ Add/Delete Functionality**
+- **Fixed**: Simplified localStorage persistence logic
+- **Result**: Changes persist after refresh
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### **✅ Persistence Issues**
+- **Fixed**: Optimized useEffect dependencies
+- **Result**: All changes saved automatically
+
+## 📁 Project Structure
+
+```
+FraudGuard/
+├── frontend/                 # React frontend application
+│   ├── src/
+│   │   ├── components/       # React components
+│   │   │   ├── PasswordManager.tsx  # Main password manager
+│   │   │   └── ui/          # Shadcn UI components
+│   │   ├── pages/           # Page components
+│   │   ├── lib/             # Utilities and libraries
+│   │   │   └── walrus-seal.ts  # Encryption utilities
+│   │   └── contexts/        # React contexts
+│   ├── public/              # Static assets
+│   └── package.json         # Dependencies
+├── backend/                 # Backend API (if needed)
+├── sui/                     # Sui blockchain contracts
+└── README.md               # This file
+```
+
+## 🔐 Security Architecture
+
+### **Encryption Flow**
+1. **Master Password** + **Wallet Address** → **Derived Key**
+2. **Password Data** + **Derived Key** → **AES-256 Encrypted**
+3. **Local Storage** → **Encrypted Data Only**
+
+### **zkLogin Integration**
+- **Authentication**: Wallet-based login
+- **Zero-Knowledge**: Privacy-preserving proofs
+- **Blockchain**: Sui network integration
+
+## 🚀 Deployment
+
+### **Development**
+```bash
+cd frontend
 npm run dev
 ```
+
+### **Production Build**
+```bash
+cd frontend
+npm run build
+```
+
+### **Preview Build**
+```bash
+cd frontend
+npm run preview
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+If you encounter any issues:
+
+1. Check the console for error messages
+2. Verify all dependencies are installed
+3. Clear browser cache and localStorage
+4. Open an issue on GitHub
+
+## 🎉 Acknowledgments
+
+- **Shadcn UI** for beautiful components
+- **Sui Foundation** for zkLogin technology
+- **CryptoJS** for encryption utilities
+- **React Team** for the amazing framework
+
+---
+
+**FraudGuard** - Secure password management with AI-powered protection and zkLogin security.
 
