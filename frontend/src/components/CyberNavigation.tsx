@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, BarChart3, Users, Settings, Zap, Home } from 'lucide-react';
+import { Shield, BarChart3, Users, Settings, Zap, Home, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WalletConnection } from '@/components/WalletConnection';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -8,6 +8,7 @@ const navItems = [
   { label: 'Dashboard', icon: Home, path: '/dashboard' },
   { label: 'Marketplace', icon: BarChart3, path: '/marketplace' },
   { label: 'Create', icon: Zap, path: '/create' },
+  { label: 'Passwords', icon: Lock, path: '/passwords' },
   { label: 'Profile', icon: Users, path: '/profile' }
 ];
 

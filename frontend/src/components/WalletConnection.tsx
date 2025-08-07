@@ -33,9 +33,16 @@ export function WalletConnection() {
     setShowSlushAuth(true);
   };
 
-  // Always show hacker animation first, then handle authentication
+  // Handle authentication and redirects
   useEffect(() => {
     console.log('WalletConnection Debug:', { account: !!account, isAuthenticated, isRedirecting, pathname: location.pathname });
+    
+    // If authenticated and on home page, redirect to dashboard
+    if (account && isAuthenticated && location.pathname === '/') {
+      console.log('User authenticated, redirecting to dashboard...');
+      navigate('/dashboard');
+      return;
+    }
     
     // If already authenticated, show Slush auth after a short delay
     if (account && isAuthenticated && !showSlushAuth && location.pathname === '/') {
@@ -44,7 +51,17 @@ export function WalletConnection() {
         setShowSlushAuth(true);
       }, 1000); // Show Slush auth after 1 second
     }
-  }, [account, isAuthenticated, showSlushAuth, location.pathname]);
+  }, [account, isAuthenticated, showSlushAuth, location.pathname, navigate]);
+
+  // Handle successful authentication redirect
+  useEffect(() => {
+    if (account && isAuthenticated && showSlushAuth) {
+      console.log('Authentication successful, redirecting to dashboard...');
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000); // Small delay to show success state
+    }
+  }, [account, isAuthenticated, showSlushAuth, navigate]);
 
   // If already authenticated and not on home page, don't render anything
   if (account && isAuthenticated && location.pathname !== '/') {
@@ -95,12 +112,18 @@ export function WalletConnection() {
               </div>
             )}
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <button
                 onClick={() => setShowSlushAuth(false)}
-                className="text-gray-400 hover:text-white text-sm"
+                className="text-gray-400 hover:text-white text-sm block"
               >
                 ← Back to login options
+              </button>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-blue-400 hover:text-blue-300 text-sm block"
+              >
+                Skip to Dashboard (Demo)
               </button>
             </div>
 

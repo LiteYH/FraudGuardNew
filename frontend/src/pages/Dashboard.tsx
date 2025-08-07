@@ -5,8 +5,13 @@ import { FraudDetectionWidget } from '@/components/FraudDetectionWidget';
 import { FraudAlert } from '@/components/FraudAlert';
 import { NftCard } from '@/components/NftCard';
 import { FloatingWarningIcon } from '@/components/FloatingWarningIcon';
+import { Button } from '@/components/ui/button';
+import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background relative">
       {/* Floating warning icon */}
@@ -20,6 +25,21 @@ const Dashboard = () => {
         {/* Dashboard Hero Section */}
         <section className="w-full">
           <DashboardHero />
+        </section>
+        
+        {/* Quick Actions Section */}
+        <section className="w-full px-6 py-4">
+          <div className="container mx-auto">
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => navigate('/passwords')}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+              >
+                <Lock className="w-5 h-5" />
+                Access Password Manager
+              </Button>
+            </div>
+          </div>
         </section>
         
         {/* Fraud Detection Widget Section */}
