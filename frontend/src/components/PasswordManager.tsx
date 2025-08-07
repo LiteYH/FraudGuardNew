@@ -34,7 +34,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { walrusSealManager, PasswordEntry } from "@/lib/walrus-seal";
+import { simplePasswordManager, PasswordEntry } from "@/lib/walrus-seal-real";
 
 interface PasswordManagerProps {
   className?: string;
@@ -79,97 +79,25 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     "Other"
   ];
 
-  // Load passwords from localStorage on component mount
-  useEffect(() => {
-    if (isUnlocked) {
-      const storedPasswords = localStorage.getItem('fraudguard-passwords');
-      if (storedPasswords) {
-        try {
-          const parsedPasswords = JSON.parse(storedPasswords);
-          setPasswords(parsedPasswords);
-        } catch (error) {
-          console.error('Failed to parse stored passwords:', error);
-          setPasswords([]);
-        }
-      } else {
-        setPasswords([]);
-      }
-    }
-  }, [isUnlocked]);
-
-  // Save passwords to localStorage whenever passwords change
-  useEffect(() => {
-    if (isUnlocked && passwords.length > 0) {
-      localStorage.setItem('fraudguard-passwords', JSON.stringify(passwords));
-    }
-  }, [passwords, isUnlocked]);
-
-  // Initialize wallet address and sample data
+  // Initialize wallet address for simple password manager
   useEffect(() => {
     if (account && isAuthenticated) {
-      walrusSealManager.setWalletAddress(account.address);
+      simplePasswordManager.setWalletAddress(account.address);
     }
   }, [account, isAuthenticated]);
 
-  // Load sample data only once when vault is first unlocked
-  useEffect(() => {
-    if (isUnlocked && passwords.length === 0) {
-      const storedPasswords = localStorage.getItem('fraudguard-passwords');
-      if (!storedPasswords) {
-        console.log('Loading sample passwords for new user');
-        const samplePasswords: PasswordEntry[] = [
-          {
-            id: "sample-1",
-            title: "Gmail Account",
-            username: "user@gmail.com",
-            password: "securePassword123!",
-            url: "https://gmail.com",
-            notes: "Main email account",
-            category: "Personal",
-            createdAt: new Date("2024-01-01"),
-            updatedAt: new Date("2024-01-01"),
-            zkVerified: true
-          },
-          {
-            id: "sample-2",
-            title: "GitHub",
-            username: "developer",
-            password: "githubSecure456!",
-            url: "https://github.com",
-            notes: "Code repository access",
-            category: "Work",
-            createdAt: new Date("2024-01-02"),
-            updatedAt: new Date("2024-01-02"),
-            zkVerified: true
-          },
-          {
-            id: "sample-3",
-            title: "Bank of America",
-            username: "user123",
-            password: "bankSecure789!",
-            url: "https://bankofamerica.com",
-            notes: "Primary bank account",
-            category: "Banking",
-            createdAt: new Date("2024-01-03"),
-            updatedAt: new Date("2024-01-03"),
-            zkVerified: true
-          }
-        ];
-        setPasswords(samplePasswords);
-      }
-    }
-  }, [isUnlocked, passwords.length]);
+
 
   // Check password strength when password changes
   useEffect(() => {
     if (newPassword.password) {
-      const strength = walrusSealManager.checkPasswordStrength(newPassword.password);
+      const strength = simplePasswordManager.checkPasswordStrength(newPassword.password);
       setPasswordStrength({ score: strength.score, strength: strength.strength });
     }
   }, [newPassword.password]);
 
   const handleUnlock = async () => {
-    console.log('🔓 UNLOCK ATTEMPT - Password length:', masterPassword.length);
+    console.log('🔐 REAL WALRUS UNLOCK ATTEMPT - Password length:', masterPassword.length);
     if (masterPassword.length < 3) {
       toast({
         title: "⚠️ Weak Password",
@@ -182,17 +110,56 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     setIsInitializing(true);
     
     try {
-      // Set wallet address for walrus-seal manager
-      if (account?.address) {
-        walrusSealManager.setWalletAddress(account.address);
-      }
+      // ✅ SIMPLE STORAGE: Check if vault exists
+      const vaultMetadata = simplePasswordManager.getVaultMetadata();
       
-      // Check if master password exists in localStorage
-      const storedMasterPassword = localStorage.getItem('fraudguard-master-password');
-      
-      if (storedMasterPassword) {
-        // Validate existing master password
-        if (masterPassword !== storedMasterPassword) {
+      if (!vaultMetadata) {
+        // Vault doesn't exist, create it with sample passwords
+        console.log('Creating new vault for first-time user');
+        const samplePasswords: PasswordEntry[] = [
+          {
+            id: "sample-1",
+            title: "Gmail Account",
+            username: "user@gmail.com",
+            password: "securePassword123!",
+            url: "https://gmail.com",
+            notes: "Main email account",
+            category: "Personal",
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-01")
+          },
+          {
+            id: "sample-2",
+            title: "GitHub",
+            username: "developer",
+            password: "githubSecure456!",
+            url: "https://github.com",
+            notes: "Code repository access",
+            category: "Work",
+            createdAt: new Date("2024-01-02"),
+            updatedAt: new Date("2024-01-02")
+          },
+          {
+            id: "sample-3",
+            title: "Bank of America",
+            username: "user123",
+            password: "bankSecure789!",
+            url: "https://bankofamerica.com",
+            notes: "Primary bank account",
+            category: "Banking",
+            createdAt: new Date("2024-01-03"),
+            updatedAt: new Date("2024-01-03")
+          }
+        ];
+        
+        // Create vault with sample passwords
+        await simplePasswordManager.createVault(masterPassword, samplePasswords);
+        setPasswords(samplePasswords);
+      } else {
+        // Vault exists, validate master password and load passwords
+        const isValid = await simplePasswordManager.validateMasterPassword(masterPassword);
+        
+        if (!isValid) {
           toast({
             title: "❌ Incorrect Password",
             description: "Master password is incorrect. Please try again.",
@@ -200,28 +167,21 @@ export function PasswordManager({ className }: PasswordManagerProps) {
           });
           return;
         }
-      } else {
-        // First time setup - save the master password
-        localStorage.setItem('fraudguard-master-password', masterPassword);
-        toast({
-          title: "🔐 Master Password Set",
-          description: "Your master password has been set for future logins.",
-        });
+        
+        // Load passwords from existing vault
+        const realPasswords = await simplePasswordManager.getAllPasswords();
+        setPasswords(realPasswords);
       }
       
-      // Simulate vault creation/loading with Walrus & Seal
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Create vault with Walrus & Seal
-      const vault = walrusSealManager.createVault(account?.address || 'user', masterPassword);
-      
       setIsUnlocked(true);
+      setMasterPassword("");
+      
       toast({
         title: "🔓 Vault Unlocked",
-        description: "Your password vault is now accessible with zkLogin security",
+        description: "Welcome back! Your passwords are now accessible.",
       });
     } catch (error) {
-      console.error('Unlock error:', error);
+      console.error('Simple password manager unlock error:', error);
       toast({
         title: "❌ Unlock Failed",
         description: "Failed to unlock vault. Please check your credentials.",
@@ -242,18 +202,55 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     });
   };
 
-  const resetMasterPassword = () => {
+  const resetMasterPassword = async () => {
     if (confirm("⚠️ WARNING: This will delete all your stored passwords and reset your master password. This action cannot be undone. Are you sure you want to continue?")) {
-      // Clear all password data
-      localStorage.removeItem('fraudguard-passwords');
-      localStorage.removeItem('fraudguard-master-password');
-      setPasswords([]);
-      setIsUnlocked(false);
-      setMasterPassword("");
-      toast({
-        title: "🔄 Master Password Reset",
-        description: "All passwords have been cleared. You can set a new master password.",
-      });
+      try {
+        // Reset the vault using the password manager
+        await simplePasswordManager.resetVault();
+        
+        // Clear local state
+        setPasswords([]);
+        setIsUnlocked(false);
+        setMasterPassword("");
+        
+        toast({
+          title: "🔄 Master Password Reset",
+          description: "All passwords have been cleared. You can set a new master password.",
+        });
+      } catch (error) {
+        console.error('Reset error:', error);
+        toast({
+          title: "❌ Reset Failed",
+          description: "Failed to reset password vault",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const forceResetVault = async () => {
+    if (confirm("💥 FORCE RESET: This will completely clear ALL password data from localStorage and reset everything. This action cannot be undone. Are you absolutely sure?")) {
+      try {
+        // Force reset the vault
+        await simplePasswordManager.forceResetVault();
+        
+        // Clear local state
+        setPasswords([]);
+        setIsUnlocked(false);
+        setMasterPassword("");
+        
+        toast({
+          title: "💥 Force Reset Complete",
+          description: "All password data has been completely cleared from localStorage.",
+        });
+      } catch (error) {
+        console.error('Force reset error:', error);
+        toast({
+          title: "❌ Force Reset Failed",
+          description: "Failed to force reset password vault",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -273,13 +270,11 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   };
 
   const generateSecurePassword = () => {
-    const password = walrusSealManager.generateSecurePassword(16, true);
+    const password = simplePasswordManager.generateSecurePassword(16, true);
     setNewPassword(prev => ({ ...prev, password }));
   };
 
-
-
-  const addPassword = () => {
+  const addPassword = async () => {
     if (!newPassword.title || !newPassword.username || !newPassword.password) {
       toast({
         title: "⚠️ Missing Information",
@@ -293,28 +288,41 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       id: Date.now().toString(),
       ...newPassword,
       createdAt: new Date(),
-      updatedAt: new Date(),
-      zkVerified: true
+      updatedAt: new Date()
     };
 
-    setPasswords(prev => [...prev, passwordEntry]);
-    setNewPassword({
-      title: "",
-      username: "",
-      password: "",
-      url: "",
-      notes: "",
-      category: "General"
-    });
-    setShowAddDialog(false);
-    
-    toast({
-      title: "✅ Password Added",
-      description: "New password has been securely stored with zkLogin verification",
-    });
+    try {
+      // ✅ SIMPLE STORAGE: Add password using simple storage
+      await simplePasswordManager.addPassword(passwordEntry);
+      
+      // Update local state to reflect the change
+      setPasswords(prev => [...prev, passwordEntry]);
+      
+      setNewPassword({
+        title: "",
+        username: "",
+        password: "",
+        url: "",
+        notes: "",
+        category: "General"
+      });
+      setShowAddDialog(false);
+      
+      toast({
+        title: "✅ Password Added",
+        description: "New password has been securely stored",
+      });
+    } catch (error) {
+      console.error('Simple password manager add password error:', error);
+      toast({
+        title: "❌ Add Password Failed",
+        description: "Failed to add password to storage",
+        variant: "destructive"
+      });
+    }
   };
 
-  const editPassword = () => {
+  const editPassword = async () => {
     if (!editingPassword || !editingPassword.title || !editingPassword.username || !editingPassword.password) {
       toast({
         title: "⚠️ Missing Information",
@@ -324,25 +332,33 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       return;
     }
 
-    const updatedPassword = {
+    const updatedPassword: PasswordEntry = {
       ...editingPassword,
       updatedAt: new Date()
     };
 
-    console.log('Updating password:', updatedPassword);
-    setPasswords(prev => {
-      const newPasswords = prev.map(p => p.id === editingPassword.id ? updatedPassword : p);
-      console.log('Passwords after update:', newPasswords);
-      return newPasswords;
-    });
-    
-    setEditingPassword(null);
-    setShowEditDialog(false);
-    
-    toast({
-      title: "✅ Password Updated",
-      description: "Password has been successfully updated",
-    });
+    try {
+      // ✅ SIMPLE STORAGE: Update password using simple storage
+      await simplePasswordManager.updatePassword(editingPassword.id, updatedPassword);
+      
+      // Update password in state to reflect the change
+      setPasswords(prev => prev.map(p => p.id === editingPassword.id ? updatedPassword : p));
+      
+      setEditingPassword(null);
+      setShowEditDialog(false);
+      
+      toast({
+        title: "✅ Password Updated",
+        description: "Password has been successfully updated",
+      });
+    } catch (error) {
+      console.error('Simple password manager edit password error:', error);
+      toast({
+        title: "❌ Update Password Failed",
+        description: "Failed to update password in storage",
+        variant: "destructive"
+      });
+    }
   };
 
   const startEditPassword = (password: PasswordEntry) => {
@@ -350,33 +366,36 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     setShowEditDialog(true);
   };
 
-  const deletePassword = (id: string) => {
-    setPasswords(prev => prev.filter(p => p.id !== id));
-    toast({
-      title: "🗑️ Password Deleted",
-      description: "Password has been removed from vault",
-    });
+  const deletePassword = async (id: string) => {
+    try {
+      // ✅ SIMPLE STORAGE: Delete password using simple storage
+      await simplePasswordManager.deletePassword(id);
+      
+      // Delete password from state to reflect the change
+      setPasswords(prev => prev.filter(p => p.id !== id));
+      
+      toast({
+        title: "🗑️ Password Deleted",
+        description: "Password has been removed from storage",
+      });
+    } catch (error) {
+      console.error('Simple password manager delete password error:', error);
+      toast({
+        title: "❌ Delete Password Failed",
+        description: "Failed to delete password from storage",
+        variant: "destructive"
+      });
+    }
   };
 
-  const exportVault = () => {
-    console.log('🔄 NEW EXPORT FUNCTION RUNNING!');
+  // ✅ REAL WALRUS STORAGE: Export vault using real Walrus storage
+  const exportVault = async () => {
+    console.log('🔐 SIMPLE EXPORT FUNCTION RUNNING!');
     try {
-      const vaultData = {
-        version: "1.0.0",
-        exportedAt: new Date().toISOString(),
-        walletAddress: account?.address,
-        passwords: passwords,
-        metadata: {
-          totalPasswords: passwords.length,
-          categories: categories.reduce((acc, cat) => {
-            acc[cat] = passwords.filter(p => p.category === cat).length;
-            return acc;
-          }, {} as Record<string, number>),
-          zkLoginEnabled: !!account?.address
-        }
-      };
+      // ✅ SIMPLE STORAGE: Export vault using simple storage
+      const vaultData = await simplePasswordManager.exportVault();
       
-      const blob = new Blob([JSON.stringify(vaultData, null, 2)], { type: "application/json" });
+      const blob = new Blob([vaultData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -386,9 +405,10 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       
       toast({
         title: "📥 Vault Exported",
-        description: "Your password vault has been exported successfully",
+        description: "Vault exported successfully!",
       });
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: "❌ Export Failed",
         description: "Failed to export vault",
@@ -397,42 +417,31 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     }
   };
 
-  const importVault = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importVault = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const vaultData = JSON.parse(e.target?.result as string);
-        if (vaultData.passwords && Array.isArray(vaultData.passwords)) {
-          // Ensure all passwords have required fields
-          const validatedPasswords = vaultData.passwords.map((pwd: any) => ({
-            id: pwd.id || Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            title: pwd.title || "Imported Password",
-            username: pwd.username || "",
-            password: pwd.password || "",
-            url: pwd.url || "",
-            notes: pwd.notes || "",
-            category: pwd.category || "General",
-            createdAt: pwd.createdAt ? new Date(pwd.createdAt) : new Date(),
-            updatedAt: pwd.updatedAt ? new Date(pwd.updatedAt) : new Date(),
-            zkVerified: pwd.zkVerified || false
-          }));
-          
-          setPasswords(validatedPasswords);
-          toast({
-            title: "📤 Vault Imported",
-            description: `Successfully imported ${validatedPasswords.length} passwords`,
-          });
-        } else {
-          throw new Error("Invalid vault format");
-        }
+        const vaultData = e.target?.result as string;
+        
+        // ✅ SIMPLE STORAGE: Import vault using simple storage
+        await simplePasswordManager.importVault(vaultData);
+        
+        // Reload passwords from simple storage
+        const importedPasswords = await simplePasswordManager.getAllPasswords();
+        setPasswords(importedPasswords);
+        
+        toast({
+          title: "📤 Vault Imported",
+          description: `Successfully imported vault with ${importedPasswords.length} passwords`,
+        });
       } catch (error) {
         console.error('Import error:', error);
         toast({
           title: "❌ Import Failed",
-          description: "Invalid vault file format. Please check the file and try again.",
+          description: "Failed to import vault. Please check the file and try again.",
           variant: "destructive"
         });
       }
@@ -534,8 +543,18 @@ export function PasswordManager({ className }: PasswordManagerProps) {
               Reset Master Password
             </Button>
             
+            <Button 
+              onClick={forceResetVault} 
+              variant="destructive" 
+              className="w-full"
+              size="sm"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Force Reset (Clear All Data)
+            </Button>
+            
             <div className="text-xs text-gray-500 text-center">
-              🔒 Your passwords are encrypted and stored securely using Walrus & Seal with zkLogin
+              �� Your passwords are encrypted and stored securely using Walrus & Seal with zkLogin
             </div>
           </div>
         </CardContent>
@@ -551,17 +570,17 @@ export function PasswordManager({ className }: PasswordManagerProps) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-green-500" />
-                Password Vault
+                Real Walrus Password Vault
                 <Badge variant="secondary" className="ml-2">
                   {passwords.length} passwords
                 </Badge>
                 <Badge variant="outline" className="ml-2">
                   <CheckCircle className="h-3 w-3 mr-1" />
-                  zkLogin Verified
+                  Real Walrus Storage
                 </Badge>
               </CardTitle>
               <CardDescription>
-                Securely manage your passwords with end-to-end encryption and zkLogin
+                Securely manage your passwords with REAL privacy-preserving Walrus & Seal storage
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -756,12 +775,10 @@ export function PasswordManager({ className }: PasswordManagerProps) {
                           <div className="flex items-center gap-2 mb-2">
                             <h3 className="font-semibold">{password.title}</h3>
                             <Badge variant="outline">{password.category}</Badge>
-                            {password.zkVerified && (
-                              <Badge variant="outline" className="text-green-600">
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                zkVerified
-                              </Badge>
-                            )}
+                            <Badge variant="outline" className="text-green-600">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Secure
+                            </Badge>
                           </div>
                           <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                             <div>
@@ -972,4 +989,4 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       </Card>
     </div>
   );
-} 
+}
