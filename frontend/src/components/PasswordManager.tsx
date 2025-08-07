@@ -30,7 +30,8 @@ import {
   CheckCircle,
   XCircle,
   Wallet,
-  Save
+  Save,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { walrusSealManager, PasswordEntry } from "@/lib/walrus-seal";
