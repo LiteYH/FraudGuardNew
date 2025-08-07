@@ -186,6 +186,28 @@ export function PasswordManager({ className }: PasswordManagerProps) {
         walrusSealManager.setWalletAddress(account.address);
       }
       
+      // Check if master password exists in localStorage
+      const storedMasterPassword = localStorage.getItem('fraudguard-master-password');
+      
+      if (storedMasterPassword) {
+        // Validate existing master password
+        if (masterPassword !== storedMasterPassword) {
+          toast({
+            title: "❌ Incorrect Password",
+            description: "Master password is incorrect. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else {
+        // First time setup - save the master password
+        localStorage.setItem('fraudguard-master-password', masterPassword);
+        toast({
+          title: "🔐 Master Password Set",
+          description: "Your master password has been set for future logins.",
+        });
+      }
+      
       // Simulate vault creation/loading with Walrus & Seal
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -217,6 +239,21 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       title: "🔒 Vault Locked",
       description: "Your password vault has been secured",
     });
+  };
+
+  const resetMasterPassword = () => {
+    if (confirm("⚠️ WARNING: This will delete all your stored passwords and reset your master password. This action cannot be undone. Are you sure you want to continue?")) {
+      // Clear all password data
+      localStorage.removeItem('fraudguard-passwords');
+      localStorage.removeItem('fraudguard-master-password');
+      setPasswords([]);
+      setIsUnlocked(false);
+      setMasterPassword("");
+      toast({
+        title: "🔄 Master Password Reset",
+        description: "All passwords have been cleared. You can set a new master password.",
+      });
+    }
   };
 
   const togglePasswordVisibility = (id: string) => {
@@ -455,7 +492,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
                 <Input
                   id="master-password"
                   type="password"
-                  placeholder="Enter your master password (min 8 characters)"
+                  placeholder="Enter your master password (min 3 characters)"
                   value={masterPassword}
                   onChange={(e) => setMasterPassword(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleUnlock()}
@@ -463,15 +500,15 @@ export function PasswordManager({ className }: PasswordManagerProps) {
                 <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
               <div className="text-xs text-gray-500">
-                Password strength: {masterPassword.length >= 8 ? "✅ Strong" : "❌ Weak"}
+                Password strength: {masterPassword.length >= 3 ? "✅ Strong" : "❌ Weak"}
               </div>
             </div>
             
             <Button 
               onClick={handleUnlock} 
               className="w-full" 
-              disabled={masterPassword.length < 8 || isInitializing}
-              variant={masterPassword.length >= 8 ? "default" : "secondary"}
+              disabled={masterPassword.length < 3 || isInitializing}
+              variant={masterPassword.length >= 3 ? "default" : "secondary"}
             >
               {isInitializing ? (
                 <>
@@ -484,6 +521,16 @@ export function PasswordManager({ className }: PasswordManagerProps) {
                   Unlock Vault
                 </>
               )}
+            </Button>
+            
+            <Button 
+              onClick={resetMasterPassword} 
+              variant="outline" 
+              className="w-full"
+              size="sm"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Master Password
             </Button>
             
             <div className="text-xs text-gray-500 text-center">

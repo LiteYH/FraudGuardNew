@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { 
   User, 
   Shield, 
@@ -14,11 +17,14 @@ import {
   Activity, 
   Award, 
   Eye, 
+  EyeOff,
   AlertTriangle,
   CheckCircle,
   Clock,
   TrendingUp,
-  Zap
+  Zap,
+  Key,
+  Lock
 } from 'lucide-react';
 
 // Mock user data
@@ -104,10 +110,80 @@ const mockRecentActivity = [
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [userData, setUserData] = useState(mockUser);
+  const [showMasterPasswordDialog, setShowMasterPasswordDialog] = useState(false);
+  const [masterPasswordForm, setMasterPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const { toast } = useToast();
 
   const handleSave = () => {
     setIsEditing(false);
     // Here you would typically save to backend
+  };
+
+  const handleMasterPasswordChange = () => {
+    const { currentPassword, newPassword, confirmPassword } = masterPasswordForm;
+    
+    // Validate current password
+    const storedMasterPassword = localStorage.getItem('fraudguard-master-password');
+    if (!storedMasterPassword || currentPassword !== storedMasterPassword) {
+      toast({
+        title: "❌ Incorrect Current Password",
+        description: "Please enter your current master password correctly.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate new password
+    if (newPassword.length < 3) {
+      toast({
+        title: "⚠️ Weak Password",
+        description: "New master password must be at least 3 characters.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "❌ Passwords Don't Match",
+        description: "New password and confirmation password must match.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update master password
+    localStorage.setItem('fraudguard-master-password', newPassword);
+    
+    // Reset form
+    setMasterPasswordForm({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: ""
+    });
+    setShowMasterPasswordDialog(false);
+    
+    toast({
+      title: "✅ Master Password Updated",
+      description: "Your master password has been successfully changed.",
+    });
+  };
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
 
   const getStatusIcon = (status: string) => {
@@ -291,6 +367,145 @@ const Profile = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
+              {/* Master Password Section */}
+              <div className="flex items-center justify-between p-4 bg-card/20 border border-border/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Key className="w-5 h-5 text-primary" />
+                  <div>
+                    <h3 className="font-medium text-foreground">Master Password</h3>
+                    <p className="text-sm text-muted-foreground">Change your password vault master password</p>
+                  </div>
+                </div>
+                <Dialog open={showMasterPasswordDialog} onOpenChange={setShowMasterPasswordDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      Change
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Change Master Password</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      {/* Current Password */}
+                      <div className="space-y-2">
+                        <Label htmlFor="current-password">Current Master Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="current-password"
+                            type={showPasswords.current ? "text" : "password"}
+                            placeholder="Enter current master password"
+                            value={masterPasswordForm.currentPassword}
+                            onChange={(e) => setMasterPasswordForm(prev => ({
+                              ...prev,
+                              currentPassword: e.target.value
+                            }))}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('current')}
+                          >
+                            {showPasswords.current ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* New Password */}
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">New Master Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="new-password"
+                            type={showPasswords.new ? "text" : "password"}
+                            placeholder="Enter new master password (min 3 characters)"
+                            value={masterPasswordForm.newPassword}
+                            onChange={(e) => setMasterPasswordForm(prev => ({
+                              ...prev,
+                              newPassword: e.target.value
+                            }))}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('new')}
+                          >
+                            {showPasswords.new ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Password strength: {masterPasswordForm.newPassword.length >= 3 ? "✅ Strong" : "❌ Weak"}
+                        </p>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-password">Confirm New Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="confirm-password"
+                            type={showPasswords.confirm ? "text" : "password"}
+                            placeholder="Confirm new master password"
+                            value={masterPasswordForm.confirmPassword}
+                            onChange={(e) => setMasterPasswordForm(prev => ({
+                              ...prev,
+                              confirmPassword: e.target.value
+                            }))}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => togglePasswordVisibility('confirm')}
+                          >
+                            {showPasswords.confirm ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-4">
+                        <Button
+                          onClick={handleMasterPasswordChange}
+                          disabled={
+                            masterPasswordForm.currentPassword.length === 0 ||
+                            masterPasswordForm.newPassword.length < 3 ||
+                            masterPasswordForm.newPassword !== masterPasswordForm.confirmPassword
+                          }
+                          className="flex-1"
+                        >
+                          <Lock className="w-4 h-4 mr-2" />
+                          Update Password
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowMasterPasswordDialog(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               <div className="flex items-center justify-between p-4 bg-card/20 border border-border/30 rounded-lg">
                 <div className="flex items-center gap-3">
                   <Shield className="w-5 h-5 text-primary" />
