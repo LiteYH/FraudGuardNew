@@ -24,17 +24,17 @@ import {
   Shield, 
   Key,
   Database,
-  AlertTriangle,
   Download,
   Upload,
   CheckCircle,
   XCircle,
   Wallet,
   Save,
-  RefreshCw
+  RefreshCw,
+  RotateCcw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { simplePasswordManager, PasswordEntry } from "@/lib/walrus-seal-real";
+import { realWalrusSealPasswordManager, PasswordEntry } from '../lib/walrus-seal-real';
 
 interface PasswordManagerProps {
   className?: string;
@@ -82,7 +82,9 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   // Initialize wallet address for simple password manager
   useEffect(() => {
     if (account && isAuthenticated) {
-      simplePasswordManager.setWalletAddress(account.address);
+      realWalrusSealPasswordManager.setWalletAddress(account.address).catch(error => {
+        console.error('Failed to set wallet address:', error);
+      });
     }
   }, [account, isAuthenticated]);
 
@@ -91,7 +93,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   // Check password strength when password changes
   useEffect(() => {
     if (newPassword.password) {
-      const strength = simplePasswordManager.checkPasswordStrength(newPassword.password);
+      const strength = realWalrusSealPasswordManager.checkPasswordStrength(newPassword.password);
       setPasswordStrength({ score: strength.score, strength: strength.strength });
     }
   }, [newPassword.password]);
@@ -110,12 +112,12 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     setIsInitializing(true);
     
     try {
-      // ✅ SIMPLE STORAGE: Check if vault exists
-      const vaultMetadata = simplePasswordManager.getVaultMetadata();
+              // ✅ REAL WALRUS & SEAL: Check if vault exists
+      const vaultMetadata = realWalrusSealPasswordManager.getVaultMetadata();
       
       if (!vaultMetadata) {
         // Vault doesn't exist, create it with sample passwords
-        console.log('Creating new vault for first-time user');
+        console.log('Creating new vault with Walrus & Seal for first-time user');
         const samplePasswords: PasswordEntry[] = [
           {
             id: "sample-1",
@@ -126,7 +128,9 @@ export function PasswordManager({ className }: PasswordManagerProps) {
             notes: "Main email account",
             category: "Personal",
             createdAt: new Date("2024-01-01"),
-            updatedAt: new Date("2024-01-01")
+            updatedAt: new Date("2024-01-01"),
+            zkVerified: true,
+            privacyLevel: 'private'
           },
           {
             id: "sample-2",
@@ -137,7 +141,9 @@ export function PasswordManager({ className }: PasswordManagerProps) {
             notes: "Code repository access",
             category: "Work",
             createdAt: new Date("2024-01-02"),
-            updatedAt: new Date("2024-01-02")
+            updatedAt: new Date("2024-01-02"),
+            zkVerified: true,
+            privacyLevel: 'private'
           },
           {
             id: "sample-3",
@@ -148,16 +154,18 @@ export function PasswordManager({ className }: PasswordManagerProps) {
             notes: "Primary bank account",
             category: "Banking",
             createdAt: new Date("2024-01-03"),
-            updatedAt: new Date("2024-01-03")
+            updatedAt: new Date("2024-01-03"),
+            zkVerified: true,
+            privacyLevel: 'private'
           }
         ];
         
-        // Create vault with sample passwords
-        await simplePasswordManager.createVault(masterPassword, samplePasswords);
+        // Create vault with sample passwords using Walrus & Seal
+        await realWalrusSealPasswordManager.createVault(masterPassword, samplePasswords);
         setPasswords(samplePasswords);
       } else {
         // Vault exists, validate master password and load passwords
-        const isValid = await simplePasswordManager.validateMasterPassword(masterPassword);
+        const isValid = await realWalrusSealPasswordManager.validateMasterPassword(masterPassword);
         
         if (!isValid) {
           toast({
@@ -168,20 +176,20 @@ export function PasswordManager({ className }: PasswordManagerProps) {
           return;
         }
         
-        // Load passwords from existing vault
-        const realPasswords = await simplePasswordManager.getAllPasswords();
+        // Load passwords from existing vault with Walrus & Seal
+        const realPasswords = await realWalrusSealPasswordManager.getAllPasswords();
         setPasswords(realPasswords);
       }
       
       setIsUnlocked(true);
       setMasterPassword("");
       
-      toast({
-        title: "🔓 Vault Unlocked",
-        description: "Welcome back! Your passwords are now accessible.",
-      });
+              toast({
+          title: "🔓 Vault Unlocked",
+          description: "Welcome back! Your passwords are now accessible with Walrus & Seal security.",
+        });
     } catch (error) {
-      console.error('Simple password manager unlock error:', error);
+      console.error('Real Walrus & Seal password manager unlock error:', error);
       toast({
         title: "❌ Unlock Failed",
         description: "Failed to unlock vault. Please check your credentials.",
@@ -205,8 +213,8 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   const resetMasterPassword = async () => {
     if (confirm("⚠️ WARNING: This will delete all your stored passwords and reset your master password. This action cannot be undone. Are you sure you want to continue?")) {
       try {
-        // Reset the vault using the password manager
-        await simplePasswordManager.resetVault();
+        // ✅ REAL WALRUS & SEAL: Reset vault and clear Walrus storage
+        await realWalrusSealPasswordManager.resetAndCreateNewVault(masterPassword);
         
         // Clear local state
         setPasswords([]);
@@ -214,8 +222,8 @@ export function PasswordManager({ className }: PasswordManagerProps) {
         setMasterPassword("");
         
         toast({
-          title: "🔄 Master Password Reset",
-          description: "All passwords have been cleared. You can set a new master password.",
+          title: "✅ Vault Reset",
+          description: "Vault has been reset and Walrus storage cleared.",
         });
       } catch (error) {
         console.error('Reset error:', error);
@@ -228,26 +236,50 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     }
   };
 
-  const forceResetVault = async () => {
-    if (confirm("💥 FORCE RESET: This will completely clear ALL password data from localStorage and reset everything. This action cannot be undone. Are you absolutely sure?")) {
+  const resetAndCreateNewVault = async () => {
+    if (confirm("🔄 RESET & CREATE NEW: This will reset your vault and create a new one with sample data. This action cannot be undone. Are you sure?")) {
       try {
-        // Force reset the vault
-        await simplePasswordManager.forceResetVault();
+        // Reset and create new vault
+        await realWalrusSealPasswordManager.resetAndCreateNewVault(masterPassword);
         
-        // Clear local state
-        setPasswords([]);
-        setIsUnlocked(false);
-        setMasterPassword("");
+        // Reload passwords
+        const newPasswords = await realWalrusSealPasswordManager.getAllPasswords();
+        setPasswords(newPasswords);
         
         toast({
-          title: "💥 Force Reset Complete",
-          description: "All password data has been completely cleared from localStorage.",
+          title: "✅ New Vault Created",
+          description: "Vault has been reset and new vault created with sample data.",
         });
       } catch (error) {
-        console.error('Force reset error:', error);
+        console.error('Reset and create error:', error);
         toast({
-          title: "❌ Force Reset Failed",
-          description: "Failed to force reset password vault",
+          title: "❌ Reset Failed",
+          description: "Failed to reset and create new vault",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const emergencyClearAndStartFresh = async () => {
+    if (confirm("🚨 EMERGENCY CLEAR: This will completely clear ALL localStorage data and start fresh. This is for severe corruption issues. Are you absolutely sure?")) {
+      try {
+        // Emergency clear and start fresh
+        await realWalrusSealPasswordManager.emergencyClearAndStartFresh(masterPassword);
+        
+        // Reload passwords
+        const newPasswords = await realWalrusSealPasswordManager.getAllPasswords();
+        setPasswords(newPasswords);
+        
+        toast({
+          title: "✅ Emergency Clear Complete",
+          description: "All data cleared and fresh vault created successfully.",
+        });
+      } catch (error) {
+        console.error('Emergency clear error:', error);
+        toast({
+          title: "❌ Emergency Clear Failed",
+          description: "Failed to perform emergency clear",
           variant: "destructive"
         });
       }
@@ -270,7 +302,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
   };
 
   const generateSecurePassword = () => {
-    const password = simplePasswordManager.generateSecurePassword(16, true);
+    const password = realWalrusSealPasswordManager.generateSecurePassword(16, true);
     setNewPassword(prev => ({ ...prev, password }));
   };
 
@@ -288,12 +320,14 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       id: Date.now().toString(),
       ...newPassword,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      zkVerified: true,
+      privacyLevel: 'private'
     };
 
     try {
-      // ✅ SIMPLE STORAGE: Add password using simple storage
-      await simplePasswordManager.addPassword(passwordEntry);
+              // ✅ REAL WALRUS & SEAL: Add password with encryption and proof
+      await realWalrusSealPasswordManager.addPassword(passwordEntry);
       
       // Update local state to reflect the change
       setPasswords(prev => [...prev, passwordEntry]);
@@ -308,12 +342,12 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       });
       setShowAddDialog(false);
       
-      toast({
-        title: "✅ Password Added",
-        description: "New password has been securely stored",
-      });
+              toast({
+          title: "✅ Password Added",
+          description: "Password has been securely stored with Walrus & Seal encryption.",
+        });
     } catch (error) {
-      console.error('Simple password manager add password error:', error);
+      console.error('Failed to add password:', error);
       toast({
         title: "❌ Add Password Failed",
         description: "Failed to add password to storage",
@@ -338,8 +372,8 @@ export function PasswordManager({ className }: PasswordManagerProps) {
     };
 
     try {
-      // ✅ SIMPLE STORAGE: Update password using simple storage
-      await simplePasswordManager.updatePassword(editingPassword.id, updatedPassword);
+              // ✅ REAL WALRUS & SEAL: Update password with encryption and proof
+      await realWalrusSealPasswordManager.updatePassword(editingPassword.id, updatedPassword);
       
       // Update password in state to reflect the change
       setPasswords(prev => prev.map(p => p.id === editingPassword.id ? updatedPassword : p));
@@ -347,12 +381,12 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       setEditingPassword(null);
       setShowEditDialog(false);
       
-      toast({
-        title: "✅ Password Updated",
-        description: "Password has been successfully updated",
-      });
+              toast({
+          title: "✅ Password Updated",
+          description: "Password has been securely updated with Walrus & Seal encryption.",
+        });
     } catch (error) {
-      console.error('Simple password manager edit password error:', error);
+      console.error('Failed to update password:', error);
       toast({
         title: "❌ Update Password Failed",
         description: "Failed to update password in storage",
@@ -368,18 +402,18 @@ export function PasswordManager({ className }: PasswordManagerProps) {
 
   const deletePassword = async (id: string) => {
     try {
-      // ✅ SIMPLE STORAGE: Delete password using simple storage
-      await simplePasswordManager.deletePassword(id);
+              // ✅ REAL WALRUS & SEAL: Delete password from Walrus storage
+      await realWalrusSealPasswordManager.deletePassword(id);
       
       // Delete password from state to reflect the change
       setPasswords(prev => prev.filter(p => p.id !== id));
       
-      toast({
-        title: "🗑️ Password Deleted",
-        description: "Password has been removed from storage",
-      });
+              toast({
+          title: "✅ Password Deleted",
+          description: "Password has been securely deleted from Walrus storage.",
+        });
     } catch (error) {
-      console.error('Simple password manager delete password error:', error);
+      console.error('Failed to delete password:', error);
       toast({
         title: "❌ Delete Password Failed",
         description: "Failed to delete password from storage",
@@ -390,10 +424,13 @@ export function PasswordManager({ className }: PasswordManagerProps) {
 
   // ✅ REAL WALRUS STORAGE: Export vault using real Walrus storage
   const exportVault = async () => {
-    console.log('🔐 SIMPLE EXPORT FUNCTION RUNNING!');
+    console.log('🔐 REAL WALRUS & SEAL EXPORT FUNCTION RUNNING!');
     try {
-      // ✅ SIMPLE STORAGE: Export vault using simple storage
-      const vaultData = await simplePasswordManager.exportVault();
+      // ✅ REAL WALRUS & SEAL: Export vault with encrypted data
+      const vaultData = await realWalrusSealPasswordManager.exportVault();
+      
+      // Validate encryption
+      const encryptionStatus = realWalrusSealPasswordManager.validateExportEncryption(vaultData);
       
       const blob = new Blob([vaultData], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -403,10 +440,18 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       a.click();
       URL.revokeObjectURL(url);
       
-      toast({
-        title: "📥 Vault Exported",
-        description: "Vault exported successfully!",
-      });
+      if (encryptionStatus.isEncrypted) {
+        toast({
+          title: "✅ Vault Exported Securely",
+          description: `Vault exported with ${encryptionStatus.encryptionAlgorithm} encryption. Sensitive data is protected.`,
+        });
+      } else {
+        toast({
+          title: "⚠️ Vault Exported",
+          description: "Vault exported but encryption status unclear. Check the file.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Export error:', error);
       toast({
@@ -426,16 +471,16 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       try {
         const vaultData = e.target?.result as string;
         
-        // ✅ SIMPLE STORAGE: Import vault using simple storage
-        await simplePasswordManager.importVault(vaultData);
+        // ✅ REAL WALRUS & SEAL: Import vault with encrypted data
+        await realWalrusSealPasswordManager.importVault(vaultData);
         
-        // Reload passwords from simple storage
-        const importedPasswords = await simplePasswordManager.getAllPasswords();
+        // Reload passwords
+        const importedPasswords = await realWalrusSealPasswordManager.getAllPasswords();
         setPasswords(importedPasswords);
         
         toast({
-          title: "📤 Vault Imported",
-          description: `Successfully imported vault with ${importedPasswords.length} passwords`,
+          title: "✅ Vault Imported",
+          description: "Vault has been imported with Walrus & Seal encrypted data.",
         });
       } catch (error) {
         console.error('Import error:', error);
@@ -544,13 +589,23 @@ export function PasswordManager({ className }: PasswordManagerProps) {
             </Button>
             
             <Button 
-              onClick={forceResetVault} 
+              onClick={resetAndCreateNewVault} 
+              variant="destructive" 
+              className="w-full"
+              size="sm"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset & Create New Vault
+            </Button>
+            
+            <Button 
+              onClick={emergencyClearAndStartFresh} 
               variant="destructive" 
               className="w-full"
               size="sm"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Force Reset (Clear All Data)
+              Emergency Clear (Severe Issues)
             </Button>
             
             <div className="text-xs text-gray-500 text-center">
@@ -962,7 +1017,7 @@ export function PasswordManager({ className }: PasswordManagerProps) {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+            <Shield className="h-5 w-5 text-blue-500" />
             Security Information
           </CardTitle>
         </CardHeader>
